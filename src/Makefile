@@ -1,9 +1,11 @@
 CFLAGS = -Wall -pedantic -O2 -std=c11
 MCC = mpicc
+NAME = broadcast
 
-bcast: bcast.c
-	$(MCC) $(CFLAGS) -o bcast $<
+$(NAME): $(NAME).c
+	$(MCC) $(CFLAGS) -o $(NAME) $<
 
 .PHONY: clean
 clean:
-	rm bcast
+	rm $(NAME)
+	
