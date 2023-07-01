@@ -23,31 +23,53 @@ void initialize_prng() {
 }
 
 void print_usage_message() {
-    printf("Uso: mpirun -np <num_procs> ./broadcast --array_size <array_size> [--custom]\n");
+    printf("Uso: mpirun -np <num_procs> ");
+    printf("./broadcast --array_size <array_size> [--root <root>] [--custom]\n");
+    printf("   num_procs: numero de processos MPI\n");
+    printf("   array_size: tamanho do array a ser distribuido entre processos\n");
+    printf("   root: rank do processo root [default = 0]\n");
+    printf("   --custom: executa custom_bcast no lugar de MPI_Bcast\n");
 }
 
-void parse_arguments(int argc, char *argv[], int *array_size_ptr, bool *is_custom_bcast_ptr) {
+void parse_arguments(
+    int argc,
+    char *argv[],
+    int *array_size_ptr,
+    bool *is_custom_bcast_ptr,
+    int *root_ptr) {
+
     int ret;
 
-    if (argc != 3 && argc != 4) {
+    if (argc < 3 || argc > 6) {
         print_usage_message();
         exit(EXIT_FAILURE);
     }
 
     *array_size_ptr = NOT_READ;
     *is_custom_bcast_ptr = false;
+    *root_ptr = 0;
 
     for (int i = 0; i < argc; i++) {
-        if (strcmp(argv[i], "--array_size") == 0) {
-            ret = sscanf(argv[i+1], "%d", array_size_ptr);
-            if (ret == 0 || ret == EOF) {
-                fprintf(stderr, "Error reading array_size\n");
-                exit(EXIT_FAILURE);
-            }
-        }
-
         if (strcmp(argv[i], "--custom") == 0) {
             *is_custom_bcast_ptr = true;
+        }
+
+        if (i < argc-1) {
+            if (strcmp(argv[i], "--array_size") == 0) {
+                ret = sscanf(argv[i+1], "%d", array_size_ptr);
+                if (ret == 0 || ret == EOF) {
+                    fprintf(stderr, "Error reading array_size\n");
+                    exit(EXIT_FAILURE);
+                }
+            }
+
+            if (strcmp(argv[i], "--root") == 0) {
+                ret = sscanf(argv[i+1], "%d", root_ptr);
+                if (ret == 0 || ret == EOF) {
+                    fprintf(stdout, "Error reading root, setting to default value 0\n");
+                    *root_ptr = 0;
+                }
+            }
         }
     }
 
@@ -63,7 +85,13 @@ void parse_arguments(int argc, char *argv[], int *array_size_ptr, bool *is_custo
     }
 }
 
-int custom_bcast(void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm ) {
+int custom_bcast(
+    void *buffer,
+    int count,
+    MPI_Datatype datatype,
+    int root,
+    MPI_Comm comm ) {
+
     // SEU CODIGO DO EP2 AQUI
 
     return MPI_SUCCESS;
@@ -76,30 +104,35 @@ int main(int argc, char *argv[]) {
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    int array_size; 
+    int array_size, root; 
     bool is_custom_bcast;
-    parse_arguments(argc, argv, &array_size, &is_custom_bcast);
+    parse_arguments(argc, argv, &array_size, &is_custom_bcast, &root);
 
     int *buf = (int *) malloc(array_size * sizeof(int));
-    if (rank == 0) {
+    if (rank == root) {
         initialize_prng();
         for (int i = 0; i < array_size; i++)
             buf[i] = rand();
     }
 
     if (is_custom_bcast)
-        custom_bcast(buf, array_size, MPI_INT, 0, MPI_COMM_WORLD);
+        custom_bcast(buf, array_size, MPI_INT, root, MPI_COMM_WORLD);
     else
-        MPI_Bcast(buf, array_size, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(buf, array_size, MPI_INT, root, MPI_COMM_WORLD);
 
-    if (rank == 0)
+    if (rank == root) {
         printf("Data sent from root, rank=%d\n", rank);
-    else
+        for (int i = 0; i < array_size; i++) 
+            printf("%d ", buf[i]);
+        printf("\n\n");
+    }
+    else {
         printf("Data received at rank=%d\n", rank);
+        for (int i = 0; i < array_size; i++) 
+            printf("%d ", buf[i]);
+        printf("\n\n");
+    }
 
-    for (int i = 0; i < array_size; i++) 
-        printf("%d ", buf[i]);
-    printf("\n\n");
 
 	MPI_Finalize();
     return 0;
