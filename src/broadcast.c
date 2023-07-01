@@ -8,6 +8,7 @@
 #define NOT_READ -1
 #define MIN_ARRAY_SIZE 1
 #define MAX_ARRAY_SIZE 64
+#define MAX_VAL 1000
 
 // Procedimento auxiliar para inicializar o gerador de 
 // numeros pseudo-aleatorios (PRNG).
@@ -111,8 +112,14 @@ int main(int argc, char *argv[]) {
     int *buf = (int *) malloc(array_size * sizeof(int));
     if (rank == root) {
         initialize_prng();
+
+        // Preenche buffers com inteiros entre 0 e MAX_VAL.
+        // Usando o operador % pois nao estamos preocupados
+        // se os valores possuem distribuicao uniforme.
+        // O limite MAX_VAL eh arbitrario, apenas para facilitar 
+        // a verificacao do resultado.
         for (int i = 0; i < array_size; i++)
-            buf[i] = rand();
+            buf[i] = rand() % MAX_VAL;
     }
 
     if (is_custom_bcast)
