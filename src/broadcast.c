@@ -133,7 +133,7 @@ int main(int argc, char *argv[]) {
         printf("\n\n");
     }
 
-
+    free(buf);
 	MPI_Finalize();
     return 0;
 }
