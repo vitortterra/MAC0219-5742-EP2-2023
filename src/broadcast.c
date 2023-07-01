@@ -6,8 +6,6 @@
 #include <mpi.h>
 
 #define NOT_READ -1
-#define MIN_ARRAY_SIZE 1
-#define MAX_ARRAY_SIZE 64
 #define MAX_VAL 1000
 
 // Procedimento auxiliar para inicializar o gerador de 
@@ -78,12 +76,6 @@ void parse_arguments(
         print_usage_message();
         exit(EXIT_FAILURE);
     }
-
-    if (*array_size_ptr < MIN_ARRAY_SIZE || *array_size_ptr > MAX_ARRAY_SIZE) {
-        printf("Invalid array_size %d (min=%d, max=%d)\n",
-            *array_size_ptr, MIN_ARRAY_SIZE, MAX_ARRAY_SIZE);
-        exit(EXIT_FAILURE);
-    }
 }
 
 int custom_bcast(
@@ -105,40 +97,57 @@ int main(int argc, char *argv[]) {
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
+    // Leitura dos argumentos de linha de comando
     int array_size, root; 
     bool is_custom_bcast;
     parse_arguments(argc, argv, &array_size, &is_custom_bcast, &root);
 
+    // Preenche buffer no processo root
+    // com inteiros entre 0 e MAX_VAL.
+    // Usando o operador % pois nao estamos preocupados
+    // se os valores possuem distribuicao uniforme.
+    // O limite MAX_VAL eh arbitrario, apenas para facilitar 
+    // a verificacao do resultado.
     int *buf = (int *) malloc(array_size * sizeof(int));
+    if (!buf) {
+        fprintf(stderr, "Error allocating buffer of size %d\n", array_size);
+        MPI_Finalize();
+        exit(EXIT_FAILURE);
+    }
     if (rank == root) {
         initialize_prng();
-
-        // Preenche buffers com inteiros entre 0 e MAX_VAL.
-        // Usando o operador % pois nao estamos preocupados
-        // se os valores possuem distribuicao uniforme.
-        // O limite MAX_VAL eh arbitrario, apenas para facilitar 
-        // a verificacao do resultado.
         for (int i = 0; i < array_size; i++)
             buf[i] = rand() % MAX_VAL;
     }
+
+    // Chamada a MPI_Bcast ou custom_bcast
+    MPI_Barrier(MPI_COMM_WORLD);
+    double t1 = MPI_Wtime();
 
     if (is_custom_bcast)
         custom_bcast(buf, array_size, MPI_INT, root, MPI_COMM_WORLD);
     else
         MPI_Bcast(buf, array_size, MPI_INT, root, MPI_COMM_WORLD);
 
-    if (rank == root) {
-        printf("Data sent from root, rank=%d\n", rank);
-        for (int i = 0; i < array_size; i++) 
-            printf("%d ", buf[i]);
-        printf("\n\n");
-    }
-    else {
-        printf("Data received at rank=%d\n", rank);
-        for (int i = 0; i < array_size; i++) 
-            printf("%d ", buf[i]);
-        printf("\n\n");
-    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    double t2 = MPI_Wtime();
+
+    // Processo root imprime o tempo transcorrido
+    if (rank == root)
+        printf("%lf\n", t2 - t1);
+
+    // if (rank == root) {
+    //     printf("Data sent from root, rank=%d\n", rank);
+    //     for (int i = 0; i < array_size; i++)
+    //         printf("%d ", buf[i]);
+    //     printf("\n\n");
+    // }
+    // else {
+    //     printf("Data received at rank=%d\n", rank);
+    //     for (int i = 0; i < array_size; i++)
+    //         printf("%d ", buf[i]);
+    //     printf("\n\n");
+    // }
 
     free(buf);
 	MPI_Finalize();
