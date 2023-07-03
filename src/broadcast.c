@@ -133,22 +133,32 @@ int main(int argc, char *argv[]) {
     MPI_Barrier(MPI_COMM_WORLD);
     double t2 = MPI_Wtime();
 
+    // Imprime dados em cada processo no modo debug
+    #ifdef DEBUG
+    int num_procs;
+    MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+    for (int r = 0; r < num_procs; r++) {
+        if (r == rank) {
+            if (r == root)
+                printf("Dados enviados do processo %d (root)\n", r);
+            else
+                printf("Dados recebidos no processo %d\n", r);
+
+            for (int i = 0; i < array_size; i++)
+                printf("%d ", buf[i]);
+
+            printf("\n\n");
+        }
+
+        // Para garantir a ordem de impressao
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+    #endif
+
     // Processo root imprime o tempo transcorrido
+    // na operacao broadcast, em segundos
     if (rank == root)
         printf("%lf\n", t2 - t1);
-
-    // if (rank == root) {
-    //     printf("Data sent from root, rank=%d\n", rank);
-    //     for (int i = 0; i < array_size; i++)
-    //         printf("%d ", buf[i]);
-    //     printf("\n\n");
-    // }
-    // else {
-    //     printf("Data received at rank=%d\n", rank);
-    //     for (int i = 0; i < array_size; i++)
-    //         printf("%d ", buf[i]);
-    //     printf("\n\n");
-    // }
 
     free(buf);
     MPI_Finalize();

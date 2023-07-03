@@ -3,7 +3,11 @@ MCC = mpicc
 NAME = broadcast
 
 $(NAME): $(NAME).c
-	$(MCC) $(CFLAGS) -o $(NAME) $<
+	$(MCC) $(DEBUG) $(CFLAGS) -o $(NAME) $<
+
+debug: DEBUG = -DDEBUG
+
+debug: $(NAME)
 
 .PHONY: clean
 clean:
