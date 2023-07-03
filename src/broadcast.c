@@ -120,7 +120,8 @@ int main(int argc, char *argv[]) {
             buf[i] = rand() % MAX_VAL;
     }
 
-    // Chamada a MPI_Bcast ou custom_bcast
+    // Chamada a MPI_Bcast ou custom_bcast e
+    // medicao do tempo transcorrido
     MPI_Barrier(MPI_COMM_WORLD);
     double t1 = MPI_Wtime();
 
