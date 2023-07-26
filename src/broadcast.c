@@ -4,6 +4,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include <mpi.h>
+#include <unistd.h>
 
 #define NOT_READ -1
 #define MAX_VAL 1000
@@ -148,6 +149,7 @@ int main(int argc, char *argv[]) {
                 printf("%d ", buf[i]);
 
             printf("\n\n");
+            sleep(1);
         }
 
         // Para garantir a ordem de impressao
